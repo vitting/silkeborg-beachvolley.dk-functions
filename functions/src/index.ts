@@ -36,3 +36,37 @@ export const deleteBulletinComment = functions.firestore.document("/bulletins_co
         return bulletinsDocRef.update({"numberOfcomments": count});
     });
 });
+
+export const addBulletinPlayersCommittedCount = functions.firestore.document("/bulletins_players_committed/{documentId}").onCreate((snap, context) => {
+    const bulletinId = snap.data().bulletinId;
+    const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
+
+    return bulletinsDocRef.get().then((doc) => {
+        let count:number = 0;
+
+        if (doc.exists) {
+            count = doc.data().numberOfPlayersCommitted;
+            count++;
+        }
+
+        return bulletinsDocRef.update({"numberOfPlayersCommitted": count});
+    });
+});
+
+export const deleteBulletinPlayersCommittedCount = functions.firestore.document("/bulletins_players_committed/{documentId}").onDelete((snap, context) => {
+    const bulletinId = snap.data().bulletinId;
+    const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
+
+    return bulletinsDocRef.get().then((doc) => {
+        let count:number = 0;
+
+        if (doc.exists) {
+            count = doc.data().numberOfPlayersCommitted;
+            if (count > 0) {
+                count--;    
+            }
+        }
+
+        return bulletinsDocRef.update({"numberOfPlayersCommitted": count});
+    });
+});
