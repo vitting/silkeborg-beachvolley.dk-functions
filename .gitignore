@@ -1,0 +1,4 @@
+.DS_Store
+.packages
+functions/node_modules
+functions/lib/*
