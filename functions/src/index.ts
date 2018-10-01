@@ -106,21 +106,27 @@ export const onNewsMatchUpdatePointsAndPlayers = functions.firestore.document("/
     let playerLoser2NumberOfMatchesLost = <number>playerLoser2Doc.data().numberOfPlayedMatches.lost;
     let playerLoser2NumberOfMatchesTotal = <number>playerLoser2Doc.data().numberOfPlayedMatches.total;
     
+    //Winner1
     playerWinner1PointTotal = playerWinner1PointTotal + winnerPoints;
     playerWinner1PointWon = playerWinner1PointWon + winnerPoints;
-    playerWinner2PointTotal = playerWinner2PointTotal + winnerPoints;
-    playerWinner2PointWon = playerWinner2PointWon + winnerPoints;
-    playerLoser1PointTotal = playerLoser1PointTotal + loserPoints;
-    playerLoser1PointLost = playerLoser1PointLost + loserPoints;
-    playerLoser2PointTotal = playerLoser2PointTotal + loserPoints;
-    playerLoser2PointLost = playerLoser2PointLost + loserPoints;
-
     playerWinner1NumberOfMatchesTotal++;
     playerWinner1NumberOfMatchesWon++;
+
+    //Winner2
+    playerWinner2PointTotal = playerWinner2PointTotal + winnerPoints;
+    playerWinner2PointWon = playerWinner2PointWon + winnerPoints;
     playerWinner2NumberOfMatchesTotal++;
     playerWinner2NumberOfMatchesWon++;
+
+    //Loser1
+    playerLoser1PointTotal = playerLoser1PointTotal + loserPoints;
+    playerLoser1PointLost = playerLoser1PointLost + loserPoints;
     playerLoser1NumberOfMatchesTotal++; 
     playerLoser1NumberOfMatchesLost++;
+
+    //Loser2
+    playerLoser2PointTotal = playerLoser2PointTotal + loserPoints;
+    playerLoser2PointLost = playerLoser2PointLost + loserPoints;
     playerLoser2NumberOfMatchesTotal++; 
     playerLoser2NumberOfMatchesLost++;
 
@@ -163,4 +169,34 @@ export const onNewsMatchUpdatePointsAndPlayers = functions.firestore.document("/
     //Update data and update it in ranking_matches
 
     return null;
+});
+
+export const getBulletinsCount = functions.https.onCall(async (data, context) => {
+    const date: Date = new Date(data.date);
+    console.log("Date", date.toDateString());
+    let newsCount: number = 0;
+    let eventCount: number = 0;
+    let playCount: number = 0;
+    const collectionName: string = "bulletins";
+    const newsDocs = await admin.firestore().collection(collectionName).where("type", "==", "news").where("creationDate", ">", date).get();
+    const eventDocs = await admin.firestore().collection(collectionName).where("type", "==", "event").where("creationDate", ">", date).get();
+    const playDocs = await admin.firestore().collection(collectionName).where("type", "==", "play").where("creationDate", ">", date).get();
+    
+    if (!newsDocs.empty) {
+        newsCount = newsDocs.docs.length;
+    }
+
+    if (!eventDocs.empty) {
+        eventCount = eventDocs.docs.length;
+    }
+
+    if (!playDocs.empty) {
+        playCount = playDocs.docs.length;
+    }
+
+    return {
+        newsCount: newsCount,
+        eventCount: eventCount,
+        playCount: playCount
+    };
 });
