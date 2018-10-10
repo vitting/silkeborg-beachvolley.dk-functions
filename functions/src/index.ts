@@ -1,7 +1,55 @@
 import * as functions from 'firebase-functions';
 import * as admin from "firebase-admin";
+import { isNumber } from 'util';
+import * as moment from 'moment';
 
 admin.initializeApp();
+
+//firebase deploy --only functions  or firebase deploy --only functions:notificationOnAddBulletin
+
+export const notificationOnAddBulletin = functions.firestore.document("/bulletins/{documentId}").onCreate(async (snap, context) => {
+    const data = snap.data();
+    const bulletinId: string = data.id;
+    const bulletinType: string = data.type;
+    const bulletinBody: string = data.body;
+    const authorName: string = data.author.name;
+    const authorId: string = data.author.id;
+    const creationDate: Date = data.creationDate.toDate();
+
+    if (bulletinId !== "" && bulletinType !== "") {
+        const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
+        if (!snapshot.empty) {
+           const listOfDevices: string[] = [];
+            snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                const docData = doc.data();
+                if(docData.userId !== authorId) {
+                    listOfDevices.push(docData.token);
+                }
+            });
+
+            if (listOfDevices.length > 0) {
+                const notificationTitle: string = authorName + " har oprettet et nyt opslag";
+                const notificationBody: string = "";
+                const payload: admin.messaging.MessagingPayload = {
+                    notification: {
+                        title: notificationTitle,
+                        body: bulletinBody
+                    },
+                    data: {
+                        "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                        "type": "bulletin",
+                        "bulletinType": bulletinType
+                    }
+                };
+    
+                await admin.messaging().sendToDevice(listOfDevices, payload);
+            }
+        }
+   
+    }
+
+    return null;
+});
 
 export const addBulletinComment = functions.firestore.document("/bulletins_comments/{documentId}").onCreate((snap, context) => {
     const bulletinId = snap.data().id;
@@ -37,7 +85,7 @@ export const deleteBulletinComment = functions.firestore.document("/bulletins_co
     });
 });
 
-export const addBulletinPlayersCommittedCount = functions.firestore.document("/bulletins_players_committed/{documentId}").onCreate((snap, context) => {
+export const addBulletinCommittedCount = functions.firestore.document("/bulletins_commits/{documentId}").onCreate((snap, context) => {
     const bulletinId = snap.data().bulletinId;
     const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
 
@@ -45,29 +93,33 @@ export const addBulletinPlayersCommittedCount = functions.firestore.document("/b
         let count:number = 0;
 
         if (doc.exists) {
-            count = doc.data().numberOfPlayersCommitted;
-            count++;
-        }
-
-        return bulletinsDocRef.update({"numberOfPlayersCommitted": count});
-    });
-});
-
-export const deleteBulletinPlayersCommittedCount = functions.firestore.document("/bulletins_players_committed/{documentId}").onDelete((snap, context) => {
-    const bulletinId = snap.data().bulletinId;
-    const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
-
-    return bulletinsDocRef.get().then((doc) => {
-        let count:number = 0;
-
-        if (doc.exists) {
-            count = doc.data().numberOfPlayersCommitted;
-            if (count > 0) {
-                count--;    
+            if (isNumber(doc.data().numberOfCommits)) {
+                count = doc.data().numberOfCommits;
+                count++;
             }
         }
 
-        return bulletinsDocRef.update({"numberOfPlayersCommitted": count});
+        return bulletinsDocRef.update({"numberOfCommits": count});
+    });
+});
+
+export const deleteBulletinCommittedCount = functions.firestore.document("/bulletins_commits/{documentId}").onDelete((snap, context) => {
+    const bulletinId = snap.data().bulletinId;
+    const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
+
+    return bulletinsDocRef.get().then((doc) => {
+        let count:number = 0;
+
+        if (doc.exists) {
+            if (isNumber(doc.data().numberOfCommits)) {
+                count = doc.data().numberOfCommits;
+                if (count > 0) {
+                    count--;    
+                }
+            }
+        }
+
+        return bulletinsDocRef.update({"numberOfCommits": count});
     });
 });
 
