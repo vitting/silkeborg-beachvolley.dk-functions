@@ -15,23 +15,23 @@ export const notificationOnAddBulletin = functions.firestore.document("/bulletin
     const authorName: string = data.author.name;
     const authorId: string = data.author.id;
     const creationDate: Date = data.creationDate.toDate();
-    
+
     try {
         if (bulletinId !== "" && bulletinType !== "") {
             const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
             if (!snapshot.empty) {
-               const listOfDevices: string[] = [];
+                const listOfDevices: string[] = [];
                 snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
                     const docData = doc.data();
-                    if(docData.userId !== authorId) {
+                    if (docData.userId !== authorId) {
                         listOfDevices.push(docData.token);
                     }
                 });
-    
+
                 if (listOfDevices.length > 0) {
                     const notificationTitle: string = authorName + " har oprettet et nyt opslag";
                     const notificationBody: string = "";
-    
+
                     const payload: admin.messaging.MessagingPayload = {
                         notification: {
                             title: notificationTitle,
@@ -43,12 +43,12 @@ export const notificationOnAddBulletin = functions.firestore.document("/bulletin
                             "bulletinType": bulletinType
                         }
                     };
-        
+
                     await admin.messaging().sendToDevice(listOfDevices, payload);
                 }
-            }   
+            }
         }
-        
+
         return Promise.resolve("Succes notificationOnAddBulletin");
     } catch (error) {
         console.log("ERROR notificationOnAddBulletin", error);
@@ -57,43 +57,41 @@ export const notificationOnAddBulletin = functions.firestore.document("/bulletin
 });
 
 export const addBulletinCommentCount = functions.firestore.document("/bulletins_comments/{documentId}").onCreate((snap, context) => {
-    const bulletinId = snap.data().id;
+    const bulletinId = snap.data().bulletinId;
     const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
 
     return admin.firestore().runTransaction(async (t: FirebaseFirestore.Transaction) => {
         let counter: number = 0;
         try {
-           const bulletinsDoc = await t.get(bulletinsDocRef); 
-
-           if (bulletinsDoc.exists) {
+            const bulletinsDoc = await t.get(bulletinsDocRef);
+            if (bulletinsDoc.exists) {
                 counter = bulletinsDoc.data().numberOfcomments;
                 counter++;
-
                 await t.update(bulletinsDocRef, {
                     "numberOfcomments": counter
                 });
             }
-        
+
             return Promise.resolve("Success addBulletinCommentCount");
         } catch (error) {
             console.log("ERROR addBulletinCommentCount", error);
-            return Promise.reject(error); 
+            return Promise.reject(error);
         }
     });
 });
 
 export const deleteBulletinCommentCount = functions.firestore.document("/bulletins_comments/{documentId}").onDelete(async (snap, context) => {
-    const bulletinId = snap.data().id;
+    const bulletinId = snap.data().bulletinId;
     const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
 
     return admin.firestore().runTransaction(async (t: FirebaseFirestore.Transaction) => {
-        let counter:number = 0;
+        let counter: number = 0;
         try {
             const bulletinsDoc = await t.get(bulletinsDocRef);
             if (bulletinsDoc.exists) {
                 counter = bulletinsDoc.data().numberOfcomments;
                 if (counter > 0) {
-                    counter--;    
+                    counter--;
                 }
 
                 await t.update(bulletinsDocRef, {
@@ -104,7 +102,7 @@ export const deleteBulletinCommentCount = functions.firestore.document("/bulleti
             return Promise.resolve("Success deleteBulletinCommentCount");
         } catch (error) {
             console.log("ERROR deleteBulletinCommentCount", error);
-            return Promise.reject(error); 
+            return Promise.reject(error);
         }
     });
 });
@@ -131,7 +129,7 @@ export const addBulletinCommittedCount = functions.firestore.document("/bulletin
             return Promise.resolve("Success addBulletinCommittedCount");
         } catch (error) {
             console.log("ERROR addBulletinCommittedCount", error);
-            return Promise.reject(error); 
+            return Promise.reject(error);
         }
     });
 });
@@ -139,7 +137,7 @@ export const addBulletinCommittedCount = functions.firestore.document("/bulletin
 export const deleteBulletinCommittedCount = functions.firestore.document("/bulletins_commits/{documentId}").onDelete(async (snap, context) => {
     const bulletinId = snap.data().bulletinId;
     const bulletinsDocRef = admin.firestore().collection("bulletins").doc(bulletinId);
-    
+
     return admin.firestore().runTransaction(async (t: FirebaseFirestore.Transaction) => {
         let counter: number = 0;
         try {
@@ -148,19 +146,19 @@ export const deleteBulletinCommittedCount = functions.firestore.document("/bulle
                 if (isNumber(bulletinDoc.data().numberOfCommits)) {
                     counter = bulletinDoc.data().numberOfCommits;
                     if (counter > 0) {
-                        counter--;    
+                        counter--;
                     }
-                }  
+                }
 
                 await t.update(bulletinsDocRef, {
-                    "numberOfCommits": counter    
+                    "numberOfCommits": counter
                 });
             }
 
             return Promise.resolve("Success deleteBulletinCommittedCount");
         } catch (error) {
             console.log("ERROR deleteBulletinCommittedCount", error);
-            return Promise.reject(error);  
+            return Promise.reject(error);
         }
     });
 });
@@ -180,7 +178,7 @@ export const onMatchDeleteUpdatePlayers = functions.firestore.document("/ranking
     const playerWinner2Ref = admin.firestore().collection("ranking_players").doc(matchWinner2Id);
     const playerLoser1Ref = admin.firestore().collection("ranking_players").doc(matchLoser1Id);
     const playerLoser2Ref = admin.firestore().collection("ranking_players").doc(matchLoser2Id);
-    
+
     return admin.firestore().runTransaction(async (t: FirebaseFirestore.Transaction) => {
         try {
             const playerWinner1Doc = await t.get(playerWinner1Ref);
@@ -213,29 +211,29 @@ export const onMatchDeleteUpdatePlayers = functions.firestore.document("/ranking
                 "points.won": playerWinner1PointsWon - matchWinner1Points,
                 "points.total": playerWinner1PointsTotal - matchWinner1Points,
                 "numberOfPlayedMatches.won": playerWinner1NumberOfMatchesWon - 1,
-                "numberOfPlayedMatches.total": playerWinner1NumberOfMatchesTotal - 1    
+                "numberOfPlayedMatches.total": playerWinner1NumberOfMatchesTotal - 1
             })
-    
+
             await t.update(playerWinner2Ref, {
                 "points.won": playerWinner2PointsWon - matchWinner2Points,
                 "points.total": playerWinner2PointsTotal - matchWinner2Points,
                 "numberOfPlayedMatches.won": playerWinner2NumberOfMatchesWon - 1,
                 "numberOfPlayedMatches.total": playerWinner2NumberOfMatchesTotal - 1
             });
-    
+
             await t.update(playerLoser1Ref, {
                 "points.lost": playerLoser1PointsLost - matchLoser1Points,
                 "points.total": playerLoser1PointsTotal - matchLoser1Points,
                 "numberOfPlayedMatches.lost": playerLoser1NumberOfMatchesLost - 1,
                 "numberOfPlayedMatches.total": playerLoser1NumberOfMatchesTotal - 1
             });
-    
+
             await t.update(playerLoser2Ref, {
                 "points.lost": playerLoser2PointsLost - matchLoser2Points,
                 "points.total": playerLoser2PointsTotal - matchLoser2Points,
                 "numberOfPlayedMatches.lost": playerLoser2NumberOfMatchesLost - 1,
                 "numberOfPlayedMatches.total": playerLoser2NumberOfMatchesTotal - 1
-            });    
+            });
 
             console.log("Succes onMatchDeleteUpdatePlayers, matchId: " + matchId);
             return Promise.resolve("Succes onMatchDeleteUpdatePlayers, matchId: " + matchId);
@@ -247,8 +245,8 @@ export const onMatchDeleteUpdatePlayers = functions.firestore.document("/ranking
 });
 
 export const onMatchAddUpdatePointsAndPlayers = functions.firestore.document("/ranking_matches/{documentId}").onCreate(async (snap, context) => {
-    const winnerPoints:number = 10;
-    const loserPoints:number = 5;
+    const winnerPoints: number = 10;
+    const loserPoints: number = 5;
     const data = snap.data();
     const matchDocumentId = context.params.documentId;
     const winner1Id: string = data.winner1.id;
@@ -299,50 +297,50 @@ export const onMatchAddUpdatePointsAndPlayers = functions.firestore.document("/r
             //Loser1
             playerLoser1PointTotal = playerLoser1PointTotal + loserPoints;
             playerLoser1PointLost = playerLoser1PointLost + loserPoints;
-            playerLoser1NumberOfMatchesTotal++; 
+            playerLoser1NumberOfMatchesTotal++;
             playerLoser1NumberOfMatchesLost++;
 
             //Loser2
             playerLoser2PointTotal = playerLoser2PointTotal + loserPoints;
             playerLoser2PointLost = playerLoser2PointLost + loserPoints;
-            playerLoser2NumberOfMatchesTotal++; 
+            playerLoser2NumberOfMatchesTotal++;
             playerLoser2NumberOfMatchesLost++;
-            
+
             await t.update(matchRef, {
                 "winner1.points": winnerPoints,
                 "winner2.points": winnerPoints,
                 "loser1.points": loserPoints,
                 "loser2.points": loserPoints
             });
-        
+
             await t.update(playerWinner1Ref, {
                 "numberOfPlayedMatches.total": playerWinner1NumberOfMatchesTotal,
                 "numberOfPlayedMatches.won": playerWinner1NumberOfMatchesWon,
                 "points.total": playerWinner1PointTotal,
-                "points.won": playerWinner1PointWon        
+                "points.won": playerWinner1PointWon
             });
-        
+
             await t.update(playerWinner2Ref, {
                 "numberOfPlayedMatches.total": playerWinner2NumberOfMatchesTotal,
                 "numberOfPlayedMatches.won": playerWinner2NumberOfMatchesWon,
                 "points.total": playerWinner2PointTotal,
-                "points.won": playerWinner2PointWon        
+                "points.won": playerWinner2PointWon
             });
-        
+
             await t.update(playerLoser1Ref, {
                 "numberOfPlayedMatches.total": playerLoser1NumberOfMatchesTotal,
                 "numberOfPlayedMatches.lost": playerLoser1NumberOfMatchesLost,
                 "points.total": playerLoser1PointTotal,
-                "points.lost": playerLoser1PointLost        
+                "points.lost": playerLoser1PointLost
             });
-        
+
             await t.update(playerLoser2Ref, {
                 "numberOfPlayedMatches.total": playerLoser2NumberOfMatchesTotal,
                 "numberOfPlayedMatches.lost": playerLoser2NumberOfMatchesLost,
                 "points.total": playerLoser2PointTotal,
-                "points.lost": playerLoser2PointLost        
+                "points.lost": playerLoser2PointLost
             });
-            
+
             console.log("Succes onNewsMatchUpdatePointsAndPlayers, matchId: " + matchDocumentId);
             return Promise.resolve("Succes onNewsMatchUpdatePointsAndPlayers, matchId: " + matchDocumentId);
         } catch (error) {
@@ -362,7 +360,7 @@ export const getBulletinsCount = functions.https.onCall(async (data, context) =>
     const newsDocs = await admin.firestore().collection(collectionName).where("type", "==", "news").where("creationDate", ">", date).get();
     const eventDocs = await admin.firestore().collection(collectionName).where("type", "==", "event").where("creationDate", ">", date).get();
     const playDocs = await admin.firestore().collection(collectionName).where("type", "==", "play").where("creationDate", ">", date).get();
-    
+
     if (!newsDocs.empty) {
         newsCount = newsDocs.docs.length;
     }
