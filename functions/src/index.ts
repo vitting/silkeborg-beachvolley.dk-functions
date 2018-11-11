@@ -1,10 +1,141 @@
 import * as functions from 'firebase-functions';
 import * as admin from "firebase-admin";
 import { isNumber } from 'util';
+import {Localization} from "./localization";
 
 admin.initializeApp();
-
+admin.firestore().settings( { timestampsInSnapshots: true });
 //firebase deploy --only functions  or firebase deploy --only functions:notificationOnAddBulletin
+
+export const notificationWriteTo = functions.firestore.document("/write_to_sbv/{documentId}").onCreate(async (snap, context) => {
+    const writeToData = snap.data();
+    const type: string = writeToData.type;
+    const collectionName: string = "users_messaging";
+    const tokensDa: string[] = [];
+    const tokensEn: string[] = [];
+    const senderName: string = writeToData.fromName;
+    const message: string = writeToData.message;
+    let titleDa: string;
+    let titleEn: string;
+    let messageType: string;
+
+    try {
+        if (type === "public") {
+            const snapshot = await admin.firestore().collection(collectionName).where("isAdmin2", "==", true).get();
+            if (!snapshot.empty) {
+                titleDa = `${senderName} ${Localization.da.string2}`;
+                titleEn = `${senderName} ${Localization.en.string2}`;
+                messageType = "message_public";
+                snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                    const subscriptions: string[] =  <string[]>doc.data().subscriptions;
+                    const indexSubscription: number = subscriptions.indexOf("writeToAdmin");
+
+                    if (doc.data().userId !== writeToData.fromUserId && indexSubscription !== -1) {
+                        const languageCode: string = doc.data().languageCode;
+                        const token: string = doc.data().token;
+                        languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
+                    }
+                });
+            } 
+        }
+    
+        if (type === "message") {
+            const snapshot = await admin.firestore().collection(collectionName).doc(writeToData.sendToUserId).get();
+            messageType = "message_sbv";
+            if (snapshot.exists) {
+                titleDa = Localization.da.string3;
+                titleEn = Localization.en.string3;
+                const languageCode: string = snapshot.data().languageCode;
+                const token: string = snapshot.data().token;
+                const subscriptions: string[] =  <string[]>snapshot.data().subscriptions;
+                const indexSubscription: number = subscriptions.indexOf("writeTo");
+                if (indexSubscription !== -1) {
+                    languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
+                }
+            }
+        }
+    
+        if (tokensDa.length > 0) {
+            const payload = notificationPayload(titleDa, message, messageType);
+            await admin.messaging().sendToDevice(tokensDa, payload);
+        }
+
+        if (tokensEn.length > 0) {
+            const payload = notificationPayload(titleEn, message, messageType);
+            await admin.messaging().sendToDevice(tokensEn, payload);
+        }
+        
+        return Promise.resolve("Succes notificationWriteTo");
+    } catch (error) {
+        console.log("ERROR notificationWriteTo", error);
+        return Promise.reject(error);   
+    }
+});
+
+export const notificationWriteToReplies = functions.firestore.document("/write_to_replies_sbv/{documentId}").onCreate(async (snap, context) => {
+    const writeToData = snap.data();
+    const type: string = writeToData.type;
+    const collectionName: string = "users_messaging";
+    const tokensDa: string[] = [];
+    const tokensEn: string[] = [];
+    const senderName: string = writeToData.fromName;
+    const message: string = writeToData.message;
+    let titleDa: string;
+    let titleEn: string;
+    let messageType: string;
+
+    try {
+        if (type === "reply") {
+            const snapshot = await admin.firestore().collection(collectionName).where("isAdmin2", "==", true).get();
+            if (!snapshot.empty) {
+                titleDa = `${senderName} ${Localization.da.string4}`;
+                titleEn = `${senderName} ${Localization.en.string4}`;
+                messageType = "message_reply_public";
+                snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                    const subscriptions: string[] =  <string[]>doc.data().subscriptions;
+                    const indexSubscription: number = subscriptions.indexOf("writeToAdmin");
+
+                    if (doc.data().userId !== writeToData.fromUserId && indexSubscription !== -1) {
+                        const languageCode: string = doc.data().languageCode;
+                        const token: string = doc.data().token;
+                        languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
+                    }
+                });
+            } 
+        }
+    
+        if (type === "reply_locale") {
+            const snapshot = await admin.firestore().collection(collectionName).doc(writeToData.sendToUserId).get();
+            messageType = "message_reply_sbv";
+            if (snapshot.exists) {
+                titleDa = Localization.da.string5;
+                titleEn = Localization.en.string5;
+                const languageCode: string = snapshot.data().languageCode;
+                const token: string = snapshot.data().token;
+                const subscriptions: string[] =  <string[]>snapshot.data().subscriptions;
+                const indexSubscription: number = subscriptions.indexOf("writeTo");
+                if (indexSubscription !== -1) {
+                    languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
+                }
+            }
+        }
+
+        if (tokensDa.length > 0) {
+            const payload = notificationPayload(titleDa, message, messageType);
+            await admin.messaging().sendToDevice(tokensDa, payload);
+        }
+
+        if (tokensEn.length > 0) {
+            const payload = notificationPayload(titleEn, message, messageType);
+            await admin.messaging().sendToDevice(tokensEn, payload);
+        }
+        
+        return Promise.resolve("Succes notificationWriteToReplies");
+    } catch (error) {
+        console.log("ERROR notificationWriteToReplies", error);
+        return Promise.reject(error);
+    }
+});
 
 export const notificationOnAddBulletin = functions.firestore.document("/bulletins/{documentId}").onCreate(async (snap, context) => {
     const data = snap.data();
@@ -13,24 +144,23 @@ export const notificationOnAddBulletin = functions.firestore.document("/bulletin
     const bulletinBody: string = data.body;
     const authorName: string = data.author.name;
     const authorId: string = data.author.id;
-    const creationDate: Date = data.creationDate.toDate();
-
+ 
     try {
         if (bulletinId !== "" && bulletinType !== "") {
             const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
             if (!snapshot.empty) {
-                const listOfDevices: string[] = [];
+                const listOfDevicesDa: string[] = [];
+                const listOfDevicesEn: string[] = [];
                 snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
                     const docData = doc.data();
+                    const languageCode: string = docData.languageCode;
                     if (docData.userId !== authorId) {
-                        listOfDevices.push(docData.token);
+                        languageCode === "da" ? listOfDevicesDa.push(docData.token) : listOfDevicesEn.push(docData.token);
                     }
                 });
 
-                if (listOfDevices.length > 0) {
-                    const notificationTitle: string = authorName + " har oprettet et nyt opslag";
-                    const notificationBody: string = "";
-
+                if (listOfDevicesDa.length > 0) {
+                    const notificationTitle: string = `${authorName} ${Localization.da.string1}`;
                     const payload: admin.messaging.MessagingPayload = {
                         notification: {
                             title: notificationTitle,
@@ -43,7 +173,24 @@ export const notificationOnAddBulletin = functions.firestore.document("/bulletin
                         }
                     };
 
-                    await admin.messaging().sendToDevice(listOfDevices, payload);
+                    await admin.messaging().sendToDevice(listOfDevicesDa, payload);
+                }
+
+                if (listOfDevicesEn.length > 0) {
+                    const notificationTitle: string = `${authorName} ${Localization.en.string1}`;
+                    const payload: admin.messaging.MessagingPayload = {
+                        notification: {
+                            title: notificationTitle,
+                            body: bulletinBody
+                        },
+                        data: {
+                            "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                            "dataType": "bulletin",
+                            "bulletinType": bulletinType
+                        }
+                    };
+
+                    await admin.messaging().sendToDevice(listOfDevicesEn, payload);
                 }
             }
         }
@@ -426,6 +573,26 @@ export const resetRanking = functions.https.onCall(async (data, context) => {
         };
     }
 });
+
+function notificationPayload(title: string, body: string, type: string, bulletinType: string = "") : admin.messaging.MessagingPayload {
+    // tslint:disable-next-line:prefer-const
+    let payload = {
+        notification: {
+            title: title,
+            body: body
+        },
+        data: {
+            "click_action": "FLUTTER_NOTIFICATION_CLICK",
+            "dataType": type
+        }
+    };
+
+    if (bulletinType !== "") {
+        payload["data"]["bulletinType"] = bulletinType;
+    }
+
+    return payload;
+}
 
 function saveToLog(userId: string, command: string) {
     const admin_log_collection = "admin_logs";
