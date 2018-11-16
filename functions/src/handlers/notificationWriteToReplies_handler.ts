@@ -6,6 +6,7 @@ import { notificationPayload } from '../helpers/notificationPayload';
 export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.DocumentSnapshot, context: functions.EventContext) {
     const writeToData = snap.data();
     const type: string = writeToData.type;
+    const subType: string = writeToData.subType;
     const collectionName: string = "users_messaging";
     const tokensDa: string[] = [];
     const tokensEn: string[] = [];
@@ -14,14 +15,16 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
     let titleDa: string;
     let titleEn: string;
     let messageType: string;
+    const payloadType = "writeto";
 
     try {
-        if (type === "reply") {
+        // Send notification to Admin 
+        if (type === "public" && subType === "reply") {
             const snapshot = await admin.firestore().collection(collectionName).where("isAdmin2", "==", true).get();
             if (!snapshot.empty) {
                 titleDa = `${senderName} ${Localization.da.string4}`;
                 titleEn = `${senderName} ${Localization.en.string4}`;
-                messageType = "message_reply_public";
+                messageType = "message_reply_from_public";
                 snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
                     const subscriptions: string[] =  <string[]>doc.data().subscriptions;
                     const indexSubscription: number = subscriptions.indexOf("writeToAdmin");
@@ -35,9 +38,9 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
             } 
         }
     
-        if (type === "reply_locale") {
+        if (type === "admin" && subType === "reply_message") {
             const snapshot = await admin.firestore().collection(collectionName).doc(writeToData.sendToUserId).get();
-            messageType = "message_reply_sbv";
+            messageType = "message_reply_from_sbv";
             if (snapshot.exists) {
                 titleDa = Localization.da.string5;
                 titleEn = Localization.en.string5;
@@ -52,12 +55,12 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
         }
 
         if (tokensDa.length > 0) {
-            const payload = notificationPayload(titleDa, message, messageType);
+            const payload = notificationPayload(titleDa, message, payloadType, messageType);
             await admin.messaging().sendToDevice(tokensDa, payload);
         }
 
         if (tokensEn.length > 0) {
-            const payload = notificationPayload(titleEn, message, messageType);
+            const payload = notificationPayload(titleEn, message, payloadType, messageType);
             await admin.messaging().sendToDevice(tokensEn, payload);
         }
         

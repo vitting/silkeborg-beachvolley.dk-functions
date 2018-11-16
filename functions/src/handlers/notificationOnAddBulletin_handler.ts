@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from "firebase-admin";
 import { Localization } from '../helpers/localization';
+import { notificationPayload } from '../helpers/notificationPayload';
 
 export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.DocumentSnapshot, context: functions.EventContext) {
     const data = snap.data();
@@ -9,7 +10,8 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
     const bulletinBody: string = data.body;
     const authorName: string = data.author.name;
     const authorId: string = data.author.id;
- 
+    const payloadType: string = "bulletin";
+    
     try {
         if (bulletinId !== "" && bulletinType !== "") {
             const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
@@ -26,35 +28,15 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
 
                 if (listOfDevicesDa.length > 0) {
                     const notificationTitle: string = `${authorName} ${Localization.da.string1}`;
-                    const payload: admin.messaging.MessagingPayload = {
-                        notification: {
-                            title: notificationTitle,
-                            body: bulletinBody
-                        },
-                        data: {
-                            "click_action": "FLUTTER_NOTIFICATION_CLICK",
-                            "dataType": "bulletin",
-                            "bulletinType": bulletinType
-                        }
-                    };
-
+                    const payload = notificationPayload(notificationTitle, bulletinBody, payloadType, bulletinType);
+                    
                     await admin.messaging().sendToDevice(listOfDevicesDa, payload);
                 }
 
                 if (listOfDevicesEn.length > 0) {
                     const notificationTitle: string = `${authorName} ${Localization.en.string1}`;
-                    const payload: admin.messaging.MessagingPayload = {
-                        notification: {
-                            title: notificationTitle,
-                            body: bulletinBody
-                        },
-                        data: {
-                            "click_action": "FLUTTER_NOTIFICATION_CLICK",
-                            "dataType": "bulletin",
-                            "bulletinType": bulletinType
-                        }
-                    };
-
+                    const payload = notificationPayload(notificationTitle, bulletinBody, payloadType, bulletinType);
+                    
                     await admin.messaging().sendToDevice(listOfDevicesEn, payload);
                 }
             }

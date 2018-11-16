@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 
-export function notificationPayload(title: string, body: string, type: string, bulletinType: string = "") : admin.messaging.MessagingPayload {
+export function notificationPayload(title: string, body: string, type: string, subType: string) : admin.messaging.MessagingPayload {
     // tslint:disable-next-line:prefer-const
     let payload = {
         notification: {
@@ -9,13 +9,10 @@ export function notificationPayload(title: string, body: string, type: string, b
         },
         data: {
             "click_action": "FLUTTER_NOTIFICATION_CLICK",
-            "dataType": type
+            "dataType": type,
+            "subType": subType
         }
     };
-
-    if (bulletinType !== "") {
-        payload["data"]["bulletinType"] = bulletinType;
-    }
 
     return payload;
 }
