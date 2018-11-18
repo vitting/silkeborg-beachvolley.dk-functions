@@ -15,6 +15,7 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
     try {
         if (bulletinId !== "" && bulletinType !== "") {
             const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
+            // console.log("Notification Add Bulletin Snapshot users_messaging count:", snapshot.docs.length);
             if (!snapshot.empty) {
                 const listOfDevicesDa: string[] = [];
                 const listOfDevicesEn: string[] = [];
@@ -29,14 +30,16 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
                 if (listOfDevicesDa.length > 0) {
                     const notificationTitle: string = `${authorName} ${Localization.da.string1}`;
                     const payload = notificationPayload(notificationTitle, bulletinBody, payloadType, bulletinType);
-                    
+                    // console.info("Notification Add Bulleting DA: ", listOfDevicesDa);
+                    // console.info("Notification Add Bulleting DA Payload: ", payload);
                     await admin.messaging().sendToDevice(listOfDevicesDa, payload);
                 }
 
                 if (listOfDevicesEn.length > 0) {
                     const notificationTitle: string = `${authorName} ${Localization.en.string1}`;
                     const payload = notificationPayload(notificationTitle, bulletinBody, payloadType, bulletinType);
-                    
+                    // console.info("Notification Add Bulleting EN: ", listOfDevicesEn);
+                    // console.info("Notification Add Bulleting EN Payload: ", payload);
                     await admin.messaging().sendToDevice(listOfDevicesEn, payload);
                 }
             }
