@@ -8,6 +8,7 @@ export class NotificationData {
         public fromName: string, 
         public fromDisplayUrl: string, 
         public userIds: string[] = [], 
+        public docId: string,
         public creationDate: admin.firestore.Timestamp = admin.firestore.Timestamp.now(), 
         public shown = false
         ) { }
@@ -20,6 +21,7 @@ export class NotificationData {
             "fromName": this.fromName,
             "fromDisplayUrl": this.fromDisplayUrl,
             "userIds": this.userIds,
+            "docId": this.docId,
             "creationDate": this.creationDate,
             "shown": this.shown
         };

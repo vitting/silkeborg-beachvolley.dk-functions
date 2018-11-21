@@ -6,6 +6,7 @@ import { NotificationData } from '../helpers/notificationData';
 
 export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.DocumentSnapshot, context: functions.EventContext) {
     const writeToData = snap.data();
+    const docId = writeToData.id;
     const type: string = writeToData.type;
     const subType: string = writeToData.subType;
     const collectionName: string = "users_messaging";
@@ -42,7 +43,7 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
                     }
                 });
 
-                notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds);
+                notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds, docId);
             } 
         }
         
@@ -64,7 +65,7 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
                 }
             }
 
-            notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds);
+            notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds, docId);
         }
 
         console.info("Notification WriteToReply TokensDa:", tokensDa.length);

@@ -31,7 +31,7 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
                     }
                 });
 
-                notificationToSave = new NotificationData(payloadType, bulletinType, authorId, authorName, authorPhotoUrl, notificationsUserIds);
+                notificationToSave = new NotificationData(payloadType, bulletinType, authorId, authorName, authorPhotoUrl, notificationsUserIds, bulletinId);
                 console.log("Notification Bulletin Data", notificationToSave.toData());
                 admin.firestore().collection("notifications").add(notificationToSave.toData());
 
