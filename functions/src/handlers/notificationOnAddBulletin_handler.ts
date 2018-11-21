@@ -2,6 +2,7 @@ import * as functions from 'firebase-functions';
 import * as admin from "firebase-admin";
 import { Localization } from '../helpers/localization';
 import { notificationPayload } from '../helpers/notificationPayload';
+import { NotificationData } from '../helpers/notificationData';
 
 export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.DocumentSnapshot, context: functions.EventContext) {
     const data = snap.data();
@@ -10,12 +11,14 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
     const bulletinBody: string = data.body;
     const authorName: string = data.author.name;
     const authorId: string = data.author.id;
+    const authorPhotoUrl: string = data.author.photoUrl;
     const payloadType: string = "bulletin";
+    let notificationToSave: NotificationData = null;
+    const notificationsUserIds: string[] = [];
     
     try {
         if (bulletinId !== "" && bulletinType !== "") {
             const snapshot = await admin.firestore().collection("users_messaging").where("subscriptions", "array-contains", bulletinType).get();
-            // console.log("Notification Add Bulletin Snapshot users_messaging count:", snapshot.docs.length);
             if (!snapshot.empty) {
                 const listOfDevicesDa: string[] = [];
                 const listOfDevicesEn: string[] = [];
@@ -24,8 +27,13 @@ export async function notificationOnAddBulletinHandler(snap: FirebaseFirestore.D
                     const languageCode: string = docData.languageCode;
                     if (docData.userId !== authorId) {
                         languageCode === "da" ? listOfDevicesDa.push(docData.token) : listOfDevicesEn.push(docData.token);
+                        notificationsUserIds.push(docData.userId);
                     }
                 });
+
+                notificationToSave = new NotificationData(payloadType, bulletinType, authorId, authorName, authorPhotoUrl, notificationsUserIds);
+                console.log("Notification Bulletin Data", notificationToSave.toData());
+                admin.firestore().collection("notifications").add(notificationToSave.toData());
 
                 if (listOfDevicesDa.length > 0) {
                     const notificationTitle: string = `${authorName} ${Localization.da.string1}`;

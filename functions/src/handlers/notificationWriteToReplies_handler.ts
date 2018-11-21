@@ -17,7 +17,8 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
     let titleEn: string;
     let messageType: string;
     const payloadType = "writeto";
-    const notificationsToSave: NotificationData[] = []
+    let notificationToSave: NotificationData = null;
+    const notificationsUserIds: string[] = [];
 
     try {
         // Send notification to Admin 
@@ -37,9 +38,11 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
                         const languageCode: string = doc.data().languageCode;
                         const token: string = doc.data().token;
                         languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
-                        notificationsToSave.push(new NotificationData(payloadType, messageType, writeToData.fromUserId, doc.data().userId));
+                        notificationsUserIds.push(doc.data().userId);
                     }
                 });
+
+                notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds);
             } 
         }
         
@@ -57,18 +60,20 @@ export async function notificationWriteToRepliesHandler(snap: FirebaseFirestore.
                 const indexSubscription: number = subscriptions.indexOf("writeTo");
                 if (indexSubscription !== -1) {
                     languageCode === "da" ? tokensDa.push(token) : tokensEn.push(token);
-                    notificationsToSave.push(new NotificationData(payloadType, messageType, writeToData.fromUserId, snapshot.data().userId));
+                    notificationsUserIds.push(snapshot.data().userId);
                 }
             }
+
+            notificationToSave = new NotificationData(payloadType, messageType, writeToData.fromUserId, writeToData.fromName, writeToData.fromPhotoUrl, notificationsUserIds);
         }
 
         console.info("Notification WriteToReply TokensDa:", tokensDa.length);
         console.info("Notification WriteToReply TokensEn:", tokensEn.length);
 
-        notificationsToSave.forEach((item: NotificationData) => {
-            console.log("Notification WriteToReply Data", item.toData());
-            admin.firestore().collection("notifications").add(item.toData());
-        });
+        if (notificationsUserIds.length > 0) {
+            console.log("Notification WriteToReply Data", notificationToSave.toData());
+            admin.firestore().collection("notifications").add(notificationToSave.toData());
+        }
 
         if (tokensDa.length > 0) {
             const payload = notificationPayload(titleDa, message, payloadType, messageType);
